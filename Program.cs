@@ -50,7 +50,7 @@ namespace ConsoleApplication1
 
             var list = new List<string>(result.Select(n=>n.title));
 
-
+            // TODO Дома которые сданны лежат в классе "b-object b-object_finish"
         }
     }
 }
