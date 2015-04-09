@@ -21,16 +21,16 @@ namespace ConsoleApplication1
 
 
            #region tmp
-            //var q = doc.DocumentNode.SelectNodes("//a[@class='b-object ']").Select(n =>
-            //{
-            //    var title_tmp = n.Element("header").Element("h2").InnerHtml.Trim();
+            var q = doc.DocumentNode.SelectNodes("//a[@class='b-object ']").Select(n =>
+            {
+                var title_tmp = n.Element("header").Element("p").Element("em").InnerText;
 
-            //    return new
-            //    {
-            //        url = @base + n.GetAttributeValue("href", ""),
-            //        title = title_tmp
-            //    };
-            //});
+                return new
+                {
+                    url = @base + n.GetAttributeValue("href", ""),
+                    title = title_tmp
+                };
+            });
            #endregion
 
 
@@ -38,7 +38,7 @@ namespace ConsoleApplication1
             // 
             var result = doc.DocumentNode.SelectNodes("//a[@class='b-object ']").Select(n =>
             {
-                var title_tmp = n.Element("header").Element("h2").InnerHtml.Trim();
+                var title_tmp = n.Element("header").Element("h2").InnerText.Trim();
                 var scan = new TextScanner(title_tmp);
                 scan.Skip("&laquo;");
                 return new
