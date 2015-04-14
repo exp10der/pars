@@ -11,7 +11,7 @@ namespace ConsoleApplication1
     {
         static void Main()
         {
-
+            #region Получаем все сылки 
             const string @base = "http://www.cds.spb.ru";
 
             string html;
@@ -39,11 +39,37 @@ namespace ConsoleApplication1
                             Uri = new Uri(uriTmp, UriKind.RelativeOrAbsolute).IsAbsoluteUri ? uriTmp : @base + uriTmp
                         };
                 }).ToList();
+            // Удаляем Последнии квартиры в сданных домах
+            realState.Remove(realState.Last());
+            #endregion
 
-            //foreach (var realEstate in realState)
-            //{
-            //    Console.WriteLine(realEstate.title);
-            //}
+            // В будущем наверно надо будет сделать список сущностей корые надо будет фиксить
+            // TODO ЭТО ЛИ НЕ ЧУДО?
+            var urlForFix = realState.Last().Uri;
+            realState.Remove(realState.Last());
+            using (var client = new HttpClient())
+            {
+                html = client.GetStringAsync(urlForFix).Result;
+            }
+            doc.LoadHtml(html);
+
+            realState.AddRange(
+                doc.DocumentNode.SelectNodes(".//*[@id='outer']/div[2]/div/table/tr/td[2]/div[2]/a").AsParallel() .Select(item =>
+                {
+                    var titleTmp = item.SelectSingleNode("header/h2");
+                    var shortAddressTmp = item.SelectSingleNode("header/p/em");
+                    var uriTmp = item.GetAttributeValue("href", "");
+
+                    // Вот тут 3
+                    return new RealEstate
+                        {
+                            title = titleTmp != null ? titleTmp.InnerText.Trim().FixString() : "",
+                            shortAddress = shortAddressTmp != null ? shortAddressTmp.InnerText.Trim().FixString() : "",
+                            Uri = new Uri(uriTmp, UriKind.RelativeOrAbsolute).IsAbsoluteUri ? uriTmp : @base + uriTmp
+                        };
+                }).ToList());
+
+            
 
             // Узнаем корпуса и uri уже на квартиры в домах
             realState.AsParallel().Select(n =>
@@ -73,7 +99,7 @@ namespace ConsoleApplication1
                             return new HousingEstate()
                             {
                                 NameHousing = tt.InnerText.Trim(),
-                                Uri = urlsite
+                                Uri =  new Uri(urlsite, UriKind.RelativeOrAbsolute).IsAbsoluteUri ? urlsite : @base + urlsite     //urlsite
                             };
                         }).ToList();
                 }
@@ -84,38 +110,52 @@ namespace ConsoleApplication1
                 return n;
             }).ToList();
 
-            realState.Last().title = "Последнии квартиры в сданных домах!";
+         
 
-            foreach (var realEstate in realState)
+            List<HousingEstate> tmp = new List<HousingEstate>();
+            foreach (var item in realState)
             {
-                Console.WriteLine(realEstate.shortAddress);
-                Console.WriteLine("  " + realEstate.title);
-                foreach (var estate in realEstate.HousingEstates)
+                if (item.HousingEstates.Count != 0)
+                {
+                    foreach (var housingEstate in item.HousingEstates)
+                    {
+                        tmp.Add(new HousingEstate()
+                        {
+                            NameHousing = item.title + " " + item.shortAddress+" " + housingEstate.NameHousing,
+                            Uri = housingEstate.Uri
+                            
+                        });
+                    }
+                }
+                else
                 {
 
-                    Console.WriteLine("\t" + estate.NameHousing);
-
+                    tmp.Add(new HousingEstate()
+                    {
+                        NameHousing = item.title + " " + item.shortAddress,
+                        Uri = item.Uri
+                    });
                 }
+
+            }
+
+            // Для теста результат!
+            foreach (var housingEstate in tmp)
+            {
+                Console.WriteLine(housingEstate.NameHousing);
+                Console.WriteLine(housingEstate.Uri);
                 Console.WriteLine();
             }
 
-            List<ImportHouseInfo> list = realState
-                .Select(n =>
-                    new ImportHouseInfo()
-                    {
-                        strHouseName = n.title
-                    }).ToList();
 
-            var listKorpus = realState.SelectMany(n =>
-                n.HousingEstates.Select(x => new ImportHouseInfo()
-                {
-                    strHouseName = n.title+" "+n.shortAddress + " " + x.NameHousing
-                })).ToList();
+            List<ImportHouseInfo> result = tmp.Select(n => new ImportHouseInfo() {HouseName = n.NameHousing}).ToList();
 
-            foreach (var importHouseInfo in listKorpus)
-            {
-                Console.WriteLine(importHouseInfo.strHouseName);
-            }
+
+
+
+
+
+
 
         }
     }
